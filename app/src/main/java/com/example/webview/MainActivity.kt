@@ -3,9 +3,6 @@ package com.example.webview
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
-import android.util.DisplayMetrics
-import android.util.Log
-import android.view.Display
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -47,8 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -88,7 +85,8 @@ fun WebViewScreen() {
     // Controla el estado del Checkbox
     var isChecked by remember { mutableStateOf(true) }
 
-    var resolution by remember { mutableStateOf("Resolucion: ") }
+    // Resolucion de la pantalla
+    var resolution by remember { mutableStateOf("") }
 
     // Scaffold que organiza la estructura basica para la topBar y el contenido principal
     Scaffold(
@@ -145,6 +143,13 @@ fun WebViewScreen() {
                     .fillMaxSize()
                     .background(Color.White)
             ) {
+                Text(
+                    resolution,
+                    color = Color.Black,
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Box(
                     modifier = Modifier
                         .padding(6.dp)
@@ -202,14 +207,30 @@ fun WebViewScreen() {
                         WebView(context).apply {
                             // Paginas con javaScript carguen
                             settings.javaScriptEnabled = true
+                            // Permite que la web use todo el viewPort
+                            settings.useWideViewPort = true
+                            // Ajusta la web al tamaño de pantalla
+                            settings.loadWithOverviewMode = true
+
                             // WebClient permite manejar diversas operaciones
                             webViewClient = object : WebViewClient() {
 
+                                // Codigo javaScript para obtener la resolucion de la web que obtenga de webView
                                 override fun onPageFinished(view: WebView?, url: String?) {
                                     view?.evaluateJavascript(
                                         "(function() { return window.innerWidth + 'x' + window.innerHeight; })();"
                                     ) { result ->
-                                        resolution = "Resolucion de la pagina: $result"
+                                        resolution = result
+
+                                        // Forzar resolucion 4k
+                                        view.evaluateJavascript(
+                                            """
+                                        (function() {
+                                            document.body.style.width = "3840px";
+                                            document.body.style.height = "2160px";
+                                        })();
+                                        """, null
+                                        )
                                     }
                                 }
 
