@@ -3,6 +3,7 @@ package com.example.webview
 import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
+import android.view.ViewGroup
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -23,9 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -64,203 +61,197 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Clase que maneja la busqueda de paginas web mediante WebView
-@RequiresApi(Build.VERSION_CODES.R)
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WebViewScreen() {
-    // Contexto actual de la aplicacion para obtener el Toast
+    // Contexto de la aplicacion para mostrar Toast
     val context = LocalContext.current
-
-    // Almacena la url que se cargara en el WebView
-    var url by remember { mutableStateOf("") }
-
-    // Referencia a WebView para manejarlo
-    var webView by remember { mutableStateOf<WebView?>(null) }
-
-    // Almacena el texto ingresado en el TextField
+    // Url en la que hara la busqueda
+    var url by remember { mutableStateOf("https://www.google.com/") }
+    // Campo de texto donde incluye la url
     var textState by remember { mutableStateOf(url) }
-
-    // Controla el estado del Checkbox
+    // Comprueba el estado del CheckBox
     var isChecked by remember { mutableStateOf(true) }
-
-    // Resolucion de la pantalla
+    // Cambiar de Composable entre los dos que hay
+    var showWebView by remember { mutableStateOf(false) }
+    // Resolucion de la aplicacion
     var resolution by remember { mutableStateOf("") }
 
-    // Scaffold que organiza la estructura basica para la topBar y el contenido principal
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Web View", color = Color.White, fontSize = 25.sp) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Blue),
-                actions = {
+    // Si es true muestra la url
+    if (showWebView) {
+        Box {
+            // Cargar el WebView
+            WebViewComponent(url, isChecked) { newResolution ->
+                // Actualiza la resolución
+                resolution = newResolution
+            }
 
-                    IconButton(onClick = {
-                        // Metodo de la clase webView que carga Urls a partir de texto
-                        webView?.loadUrl(textState)
-                    }) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Cargar URL",
-                            tint = Color.White
-                        )
-                    }
-
-                    // Vacia el textState
-                    IconButton(onClick = { textState = "" }) {
-                        Icon(
-                            imageVector = Icons.Filled.Clear,
-                            contentDescription = "Borrar texto",
-                            tint = Color.White
-                        )
-                    }
-
-                    // Vuelve atras en una url
-                    IconButton(onClick = { webView?.goBack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Ir atrás",
-                            tint = Color.White
-                        )
-                    }
-
-                    // Va hacia delante en una url
-                    IconButton(onClick = { webView?.goForward() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Ir adelante",
-                            tint = Color.White
-                        )
-                    }
-                }
+            // Texto flotante que muestra la resolución
+            Text(
+                text = "Resolucion: $resolution",
+                color = Color.White,
+                fontSize = 24.sp,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(16.dp)
+                    .background(Color.DarkGray)
             )
-        },
-        content = { paddingValues ->
-            Column(
-                Modifier
-                    .padding(paddingValues)
-                    .fillMaxSize()
-                    .background(Color.White)
-            ) {
-                Text(
-                    resolution,
-                    color = Color.Black,
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+        }
+    } else {
+        // Scaffold que gestiona la topBar y contenido
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Web View", color = Color.White, fontSize = 25.sp) },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Blue),
+                    actions = {
+                        IconButton(onClick = {
+                            if (textState.isNotEmpty()) {
+                                url = textState
+                                // Cambia de pantalla al hacer la busqueda
+                                showWebView = true
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "Cargar URL",
+                                tint = Color.White
+                            )
+                        }
+                    }
                 )
-                Box(
-                    modifier = Modifier
-                        .padding(6.dp)
-                        .fillMaxWidth()
-                        .border(2.dp, Color.DarkGray, RoundedCornerShape(24.dp))
+            },
+            content = { paddingValues ->
+                Column(
+                    Modifier
+                        .padding(paddingValues)
+                        .fillMaxSize()
                         .background(Color.White)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .padding(6.dp)
+                            .fillMaxWidth()
+                            .border(2.dp, Color.DarkGray, RoundedCornerShape(24.dp))
+                            .background(Color.White)
                     ) {
-                        BasicTextField(
-                            value = textState,
-                            onValueChange = { textState = it },
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(8.dp),
-                            singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(color = Color.Black),
-                            decorationBox = { innerTextField ->
-                                if (textState.isEmpty()) {
-                                    Text(
-                                        text = "Buscar URL",
-                                        color = Color.DarkGray,
-                                        modifier = Modifier.padding(8.dp)
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        )
-
-                        // CheckBox que si esta marcado permitira la navegacion dentro de las url, y vicerversa
-                        Checkbox(
-                            checked = isChecked,
-                            onCheckedChange = { checked ->
-                                isChecked = checked
-                                val message =
-                                    if (checked) {
-                                        "Navegación activada"
-                                    } else {
-                                        "Navegación desactivada"
-                                    }
-                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.padding(end = 8.dp, top = 3.dp)
-                        )
-                    }
-                }
-
-                // Permite integrar WebView en Compose
-                AndroidView(
-                    // Instancia
-                    factory = { context ->
-                        WebView(context).apply {
-                            // Paginas con javaScript carguen
-                            settings.javaScriptEnabled = true
-                            // Permite que la web use todo el viewPort
-                            settings.useWideViewPort = true
-                            // Ajusta la web al tamaño de pantalla
-                            settings.loadWithOverviewMode = true
-
-                            // WebClient permite manejar diversas operaciones
-                            webViewClient = object : WebViewClient() {
-
-                                // Codigo javaScript para obtener la resolucion de la web que obtenga de webView
-                                override fun onPageFinished(view: WebView?, url: String?) {
-                                    view?.evaluateJavascript(
-                                        "(function() { return window.innerWidth + 'x' + window.innerHeight; })();"
-                                    ) { result ->
-                                        resolution = result
-
-                                        // Forzar resolucion 4k
-                                        view.evaluateJavascript(
-                                            """
-                                        (function() {
-                                            document.body.style.width = "3840px";
-                                            document.body.style.height = "2160px";
-                                        })();
-                                        """, null
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            BasicTextField(
+                                value = textState,
+                                onValueChange = { textState = it },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(8.dp),
+                                singleLine = true,
+                                textStyle = LocalTextStyle.current.copy(color = Color.Black),
+                                decorationBox = { innerTextField ->
+                                    if (textState.isEmpty()) {
+                                        Text(
+                                            text = "Buscar URL",
+                                            color = Color.DarkGray,
+                                            modifier = Modifier.padding(8.dp)
                                         )
                                     }
+                                    innerTextField()
                                 }
+                            )
 
-                                override fun shouldOverrideUrlLoading(
-                                    view: WebView?,
-                                    request: WebResourceRequest?
-                                ): Boolean {
-                                    if (isChecked) {
-                                        // Permite la carga de la nueva url
-                                        request?.url?.let {
-                                            view?.loadUrl(it.toString())
-                                        }
-                                        // Si no se mantiene la pagina
-                                    }
-                                    return true
-
-                                }
-                            }
-                            loadUrl(url)
-                            webView = this
+                            Checkbox(
+                                checked = isChecked,
+                                onCheckedChange = { checked ->
+                                    isChecked = checked
+                                    val message =
+                                        if (checked) "Navegación activada" else "Navegación desactivada"
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.padding(end = 8.dp, top = 3.dp)
+                            )
                         }
-                    },
-                    // Actualiza la vista para no crear otra instancia
-                    update = { webViewInstance ->
-                        // Intancia del factory
-                        webViewInstance.loadUrl(url)
-                        webView = webViewInstance
                     }
-                )
+                }
             }
+        )
+    }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+fun WebViewComponent(
+    url: String,
+    isChecked: Boolean,
+    onResolutionChange: (String) -> Unit
+) {
+    AndroidView(
+        factory = { context ->
+            WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.useWideViewPort = true
+                settings.loadWithOverviewMode = true
+                settings.domStorageEnabled = true
+                settings.allowFileAccess = true
+                settings.setSupportZoom(true)
+
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+
+                settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
+
+                webViewClient = object : WebViewClient() {
+                    var initialUrlLoaded = false
+
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        view?.evaluateJavascript("""
+                            (function() {
+
+                                var meta = document.querySelector('meta[name="viewport"]');
+                                if (!meta) {
+                                    meta = document.createElement('meta');
+                                    meta.name = "viewport";
+                                    document.head.appendChild(meta);
+                                }
+                                meta.content = "width=3840, initial-scale=1.0";
+
+                                document.body.style.width = "3840px";
+                                document.body.style.minHeight = "2160px";
+
+                                return window.innerWidth + 'x' + window.innerHeight;
+                            })();
+                        """) { result ->
+                            onResolutionChange(result)
+                        }
+
+                        if (url == this@apply.originalUrl) {
+                            initialUrlLoaded = true
+                        }
+                    }
+
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView?,
+                        request: WebResourceRequest?
+                    ): Boolean {
+                        return if (isChecked) {
+                            false
+                        } else {
+                            if (!initialUrlLoaded) {
+                                false
+                            } else {
+                                true
+                            }
+                        }
+                    }
+                }
+                loadUrl(url)
+            }
+        },
+        update = { webViewInstance ->
+            webViewInstance.loadUrl(url)
         }
     )
 }
