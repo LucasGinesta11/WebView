@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,11 +70,13 @@ fun WebViewScreen() {
     // Contexto de la aplicacion para mostrar Toast
     val context = LocalContext.current
     // Url en la que hara la busqueda
-    var url by remember { mutableStateOf("https://orbys.eu/") }
+    var url by remember { mutableStateOf("https://www.google.com/") }
     // Campo de texto donde incluye la url
     var textState by remember { mutableStateOf(url) }
-    // Comprueba el estado del CheckBox
+    // Comprueba el estado del CheckBox para navegar
     var isChecked by remember { mutableStateOf(true) }
+    // Checkbox para activar el zoom
+    var isCheckedZoom by remember { mutableStateOf(true) }
     // Cambiar de Composable entre los dos que hay
     var showWebView by remember { mutableStateOf(false) }
     // Resolucion de la aplicacion
@@ -83,7 +86,7 @@ fun WebViewScreen() {
     if (showWebView) {
         Box {
             // Cargar el WebView
-            WebViewComponent(url, isChecked) { newResolution ->
+            WebViewComponent(url, isChecked, isCheckedZoom) { newResolution ->
                 // Actualiza la resolución
                 resolution = newResolution
             }
@@ -163,6 +166,18 @@ fun WebViewScreen() {
                             )
 
                             Checkbox(
+                                checked = isCheckedZoom,
+                                onCheckedChange = { checked ->
+                                    isCheckedZoom = checked
+                                    val message =
+                                        if (checked) "Zoom activado" else "Zoom desactivado"
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.padding(end = 8.dp, top = 3.dp),
+                                colors = CheckboxDefaults.colors(checkedColor = Color.Red)
+                            )
+
+                            Checkbox(
                                 checked = isChecked,
                                 onCheckedChange = { checked ->
                                     isChecked = checked
@@ -185,6 +200,7 @@ fun WebViewScreen() {
 fun WebViewComponent(
     url: String,
     isChecked: Boolean,
+    isCheckedZoom: Boolean,
     onResolutionChange: (String) -> Unit
 ) {
     AndroidView(
@@ -223,10 +239,11 @@ fun WebViewComponent(
                 webViewClient = object : WebViewClient() {
                     var initialUrlLoaded = false
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
+                    override fun onLoadResource(view: WebView?, url: String?) {
+                        super.onLoadResource(view, url)
                         // Forzar resolución 4K
-                        view?.evaluateJavascript("""
+                        view?.evaluateJavascript(
+                            """
                             (function() {
                                 var meta = document.querySelector('meta[name="viewport"]');
                                 if (!meta) {
@@ -238,17 +255,22 @@ fun WebViewComponent(
                                 
                                 document.body.style.width = '3840px';
                                 document.body.style.height = '2160px';
-                                
+                           
                                 return document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight;
                             })();
-                        """) { result ->
+                        """
+                        ) { result ->
                             onResolutionChange(result)
                         }
 
                         // Escalar contenido si es necesario
-                        view?.evaluateJavascript("""
+                        if (isCheckedZoom) {
+                            view?.evaluateJavascript(
+                                """
                             document.body.style.zoom = (window.innerWidth / 3840) * 100 + '%';
-                        """, null)
+                        """, null
+                            )
+                        }
 
                         if (url == this@apply.originalUrl) {
                             initialUrlLoaded = true
@@ -260,12 +282,9 @@ fun WebViewComponent(
                         view: WebView?,
                         request: WebResourceRequest?
                     ): Boolean {
-                        return if (isChecked) {
-                            false
-                        } else {
-                            initialUrlLoaded
-                        }
+                        return !isChecked // Si no está checked, sobreescribe la carga (no navega)
                     }
+
 
                 }
                 loadUrl(url)
