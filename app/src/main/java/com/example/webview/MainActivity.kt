@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -68,7 +69,7 @@ fun WebViewScreen() {
     // Contexto de la aplicacion para mostrar Toast
     val context = LocalContext.current
     // Url en la que hara la busqueda
-    var url by remember { mutableStateOf("https://www.google.com/") }
+    var url by remember { mutableStateOf("https://orbys.eu/") }
     // Campo de texto donde incluye la url
     var textState by remember { mutableStateOf(url) }
     // Comprueba el estado del CheckBox
@@ -189,49 +190,72 @@ fun WebViewComponent(
     AndroidView(
         factory = { context ->
             WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.useWideViewPort = true
-                settings.loadWithOverviewMode = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
-                settings.setSupportZoom(true)
+                with(settings) {
+                    // Activa javascript
+                    javaScriptEnabled = true
+                    // La pagina se ajusta al ancho de la pantalla
+                    useWideViewPort = true
+                    // Ajusta el contenido
+                    loadWithOverviewMode = true
+                    // Almacenamiento local en web
+                    domStorageEnabled = true
+                    // Acceso a archivos locales
+                    allowFileAccess = true
+                    // Permite el zoom
+                    setSupportZoom(true)
+                    // Desactiva los controles de zoom
+                    builtInZoomControls = false
+                    // Oculta los botones de zoom
+                    displayZoomControls = false
 
+                    // Reutiliza cache
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                    // Reproduce videos sin necesidad de tocar la pantalla
+                    mediaPlaybackRequiresUserGesture = false
+                }
+
+                // WebView ocupe toda la pantalla
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
 
-                settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
-
                 webViewClient = object : WebViewClient() {
                     var initialUrlLoaded = false
 
                     override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                        // Forzar resolución 4K
                         view?.evaluateJavascript("""
                             (function() {
-
                                 var meta = document.querySelector('meta[name="viewport"]');
                                 if (!meta) {
                                     meta = document.createElement('meta');
                                     meta.name = "viewport";
                                     document.head.appendChild(meta);
                                 }
-                                meta.content = "width=3840, initial-scale=1.0";
-
-                                document.body.style.width = "3840px";
-                                document.body.style.minHeight = "2160px";
-
-                                return window.innerWidth + 'x' + window.innerHeight;
+                                meta.content = "width=3840, height=2160, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+                                
+                                document.body.style.width = '3840px';
+                                document.body.style.height = '2160px';
+                                
+                                return document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight;
                             })();
                         """) { result ->
                             onResolutionChange(result)
                         }
+
+                        // Escalar contenido si es necesario
+                        view?.evaluateJavascript("""
+                            document.body.style.zoom = (window.innerWidth / 3840) * 100 + '%';
+                        """, null)
 
                         if (url == this@apply.originalUrl) {
                             initialUrlLoaded = true
                         }
                     }
 
+                    // Logica de checkbox
                     override fun shouldOverrideUrlLoading(
                         view: WebView?,
                         request: WebResourceRequest?
@@ -239,19 +263,19 @@ fun WebViewComponent(
                         return if (isChecked) {
                             false
                         } else {
-                            if (!initialUrlLoaded) {
-                                false
-                            } else {
-                                true
-                            }
+                            initialUrlLoaded
                         }
                     }
+
                 }
                 loadUrl(url)
             }
         },
         update = { webViewInstance ->
-            webViewInstance.loadUrl(url)
-        }
+            if (webViewInstance.url != url) {
+                webViewInstance.loadUrl(url)
+            }
+        },
+        modifier = Modifier.fillMaxSize()
     )
 }
